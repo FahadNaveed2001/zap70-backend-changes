@@ -2788,6 +2788,146 @@ app.put('/edit-tester-user/:id', (req, res) => {
   editTesterUser(testerUser, req, res);
 });
 
+app.put(
+  "/tester/edit-question/:mcqId",
+  upload.fields([
+    { name: "image", maxCount: 1 },
+    { name: "imageTwo", maxCount: 1 },
+    { name: "video", maxCount: 1 },
+  ]),
+  async (req, res) => {
+    const { mcqId } = req.params;
+    const {
+      usmleStep,
+      USMLE,
+      question,
+      optionOne,
+      optionTwo,
+      optionThree,
+      optionFour,
+      optionFive,
+      optionSix,
+      correctAnswer,
+      questionExplanation,
+      optionOneExplanation,
+      optionTwoExplanation,
+      optionThreeExplanation,
+      optionFourExplanation,
+      optionFiveExplanation,
+      optionSixExplanation,
+      
+    } = req.body;
+
+    if (!usmleStep || !USMLE || !question || !correctAnswer) {
+      return res
+        .status(400)
+        .json({ error: true, message: "Missing required fields." });
+    }
+    try {
+      const mcqToUpdate = await MCQ.findById(mcqId);
+      if (!mcqToUpdate) {
+        return res.status(404).json({ error: true, message: "MCQ not found." });
+      }
+      const fieldsToUpdate = {
+        usmleStep,
+        USMLE,
+        question,
+        optionOne,
+        optionTwo,
+        optionThree,
+        optionFour,
+        optionFive,
+        optionSix,
+        correctAnswer,
+        questionExplanation,
+        optionOneExplanation,
+        optionTwoExplanation,
+        optionThreeExplanation,
+        optionFourExplanation,
+        optionFiveExplanation,
+        optionSixExplanation,
+        editedOn: Date.now(),
+      };
+      Object.keys(fieldsToUpdate).forEach((field) => {
+        if (fieldsToUpdate[field] !== undefined) {
+          mcqToUpdate[field] = fieldsToUpdate[field];
+        }
+      });
+      if (req.files["image"]) {
+        mcqToUpdate.image = req.files["image"][0].filename;
+      }
+      if (req.files["imageTwo"]) {
+        const imagesDirectory = path.join(__dirname, "uploads/images");
+        const newImageTwo = req.files["imageTwo"][0].filename;
+        if (mcqToUpdate.imageTwo) {
+          const oldImagePath = path.join(imagesDirectory, mcqToUpdate.imageTwo);
+          if (fs.existsSync(oldImagePath)) {
+            fs.unlinkSync(oldImagePath);
+          }
+          const newImagePath = path.join(imagesDirectory, mcqToUpdate.imageTwo);
+          fs.renameSync(req.files["imageTwo"][0].path, newImagePath);
+        } else {
+          const newImagePath = path.join(imagesDirectory, newImageTwo);
+          fs.renameSync(req.files["imageTwo"][0].path, newImagePath);
+          mcqToUpdate.imageTwo = newImageTwo;
+        }
+      }
+      if (req.files["video"]) {
+        mcqToUpdate.video = req.files["video"][0].filename;
+      }
+      const updatedMCQ = await mcqToUpdate.save();
+      res.status(200).json({
+        status: "success",
+        success: true,
+        message: "MCQ updated successfully",
+        data: updatedMCQ,
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({
+        error: true,
+        message: "Error Updating MCQ",
+        errorMessage: error.message,
+      });
+    }
+  }
+);
+
+app.post('/tester/mark-correct/:mcqId', async (req, res) => {
+  const { mcqId } = req.params;
+
+  if (!mcqId) {
+    return res.status(400).json({ error: true, message: "MCQ ID is required." });
+  }
+  try {
+    const updatedMCQ = await MCQ.findByIdAndUpdate(
+      mcqId,
+      { 
+        editedOn: Date.now(),
+        isCorrect: true 
+      },
+      { new: true, runValidators: true } 
+    );
+    if (!updatedMCQ) {
+      return res.status(404).json({ error: true, message: "MCQ not found." });
+    }
+    res.status(200).json({
+      status: "success",
+      success: true,
+      message: "MCQ fields updated successfully",
+      data: updatedMCQ,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      error: true,
+      message: "Error Updating MCQ",
+      errorMessage: error.message,
+    });
+  }
+});
+
+
 //server
 app.listen(PORT, () => {
   console.log("==================================");

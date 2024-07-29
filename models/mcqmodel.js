@@ -91,6 +91,15 @@ const mcqSchema = new mongoose.Schema({
   video: {
     type: String, 
   },
+  editedOn : {
+    type: Date,
+  },
+  isCorrect: {
+    type : Boolean
+    },
+  correctedBy : {
+    type: String
+  }
 });
 
 const MCQ = mongoose.model("Q/A-MCQ", mcqSchema);
